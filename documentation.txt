@@ -1,0 +1,106 @@
+docker build --tag "nestjs-api" .
+
+--tag "nestjs-api"
+
+docker run nestjs-api
+
+npm run start:prod
+
+image: nestjs-api
+
+docker build --tag "nestjs-api" .
+
+docker-compose up
+
+## This example with dockerfile
+
+FROM node:19.4.0-bullseye-slim as build
+WORKDIR /app
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci
+COPY --chown=node:node . .
+RUN npm run build
+ 
+FROM node:19.4.0-bullseye-slim
+RUN apt-get update && apt-get install curl -y
+WORKDIR /app
+COPY --chown=node:node --from=build /app/package.json /app/package-lock.json ./
+COPY --chown=node:node --from=build /app/node_modules ./node_modules
+COPY --chown=node:node --from=build /app/dist ./dist
+RUN npm prune --production
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=15s CMD curl -f http://localhost:3000/api/health
+CMD ["node",  "dist/main"]
+
+---------------
+
+## This example with docker-compose and mongoDB
+
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - dbdata6:/data/db
+volumes:
+  dbdata6:
+
+-----------
+## Docker file with nodejs
+
+
+FROM node:18-alpine
+
+WORKDIR /src
+COPY package.json package-lock.json /src/
+RUN npm install --production
+
+COPY . /src
+
+EXPOSE 8085
+
+CMD ["node", "server.js"]
+
+-------------------
+## docker compose yml example with nodejs and mongoDB
+
+version: '3.8'
+
+services:
+  node-app:
+    build: .
+    image: node-app
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/node-boilerplate
+    ports:
+      - '8085:8085'
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/src
+    networks:
+      - node-network
+
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - dbdata6:/data/db
+    networks:
+      - node-network
+
+volumes:
+  dbdata6:
+
+networks:
+  node-network:
+    driver: bridge
+
+---------
+For finish 
+
+curl --location --request POST 'http://localhost:8085/api/tutorials' --header 'Content-Type: application/json' --data-raw '{ "title": "How to run MongoDB with docker and docker-compose; a step-by-step guide", "description": "You must read this post :)"}'
